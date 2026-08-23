@@ -1,0 +1,43 @@
+# Security Policy
+
+## Supported Versions
+
+| Version | Supported |
+|---------|-----------|
+| `main` branch | Yes |
+| Older releases | No |
+
+We recommend always running the latest version from `main` or the most recent release.
+
+## Reporting a Vulnerability
+
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+If you discover a security vulnerability, please email **dev@imyanya.rw** with the subject line `[SECURITY] Imyanya Tickets vulnerability`.
+
+Include:
+- A description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Any suggested fixes (optional)
+
+You will receive a response within **48 hours**. We take all security reports seriously and will work with you to understand and address the issue promptly.
+
+## Disclosure Policy
+
+- We will acknowledge receipt of your report within 48 hours
+- We will provide an estimated timeline for a fix
+- We will notify you when the issue is resolved
+- We credit reporters in the fix commit/release notes (unless you prefer anonymity)
+
+## Scope
+
+This policy covers the Imyanya Tickets application code at https://tickets.imyanya.rw. It does not cover third-party dependencies — please report those to the respective upstream project.
+
+## Known Security Considerations
+
+- All API routes validate authentication via Better Auth sessions
+- Host/cohost ownership is enforced on RSVP approve/reject server actions and check-in writes
+- Private event visibility is enforced server-side
+- Check-in records can only be created by the event host or co-host
+- Environment variables (API keys, secrets) must never be committed — see `.env.example`

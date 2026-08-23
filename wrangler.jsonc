@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "imyanya-tickets",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": [
+    // Node.js API support (required by Next.js, postgres.js, Better Auth)
+    "nodejs_compat",
+    // Allow fetching external URLs from the app
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "imyanya-tickets"
+    }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
