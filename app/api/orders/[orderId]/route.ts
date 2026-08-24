@@ -9,6 +9,7 @@ import {
   getCollectionStatus,
   isRwandaPayConfigured,
 } from "@/lib/rwandapay";
+import { issueTicketsForOrder } from "@/lib/ticketing-server";
 
 export async function GET(
   _req: NextRequest,
@@ -44,13 +45,21 @@ export async function GET(
             paidAt: collection.paidAt
               ? new Date(collection.paidAt)
               : new Date(),
-            paymentFee: collection.fee,
+            paymentFee:
+              collection.fee !== null && Number.isFinite(collection.fee)
+                ? Math.round(collection.fee)
+                : null,
             paymentMethod: status.paymentMethod,
             status: "paid",
           })
           .where(eq(orders.id, orderId))
           .returning();
         order = updated ?? order;
+        try {
+          await issueTicketsForOrder(orderId);
+        } catch (error) {
+          console.error("[orders] ticket issuance failed:", error);
+        }
       }
     } catch (error) {
       console.error("[orders] status poll failed:", error);

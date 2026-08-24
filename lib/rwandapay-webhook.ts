@@ -8,6 +8,7 @@ import {
   type RwandaPayWebhookEvent,
   verifyRwandaPayWebhookSignature,
 } from "@/lib/rwandapay";
+import { issueTicketsForOrder } from "@/lib/ticketing-server";
 
 // RwandaPay registers https://tickets.imyanya.rw/api/webhooks/payments and
 // /api/payments/rwandapay/webhook also points here, so fulfillment logic
@@ -59,8 +60,8 @@ async function fulfillOrder(reference: string, event: RwandaPayWebhookEvent) {
   try {
     const { fee: gatewayFee, paidAt: providerPaidAt } =
       await getCollection(reference);
-    if (gatewayFee !== null) {
-      fee = gatewayFee;
+    if (gatewayFee !== null && Number.isFinite(gatewayFee)) {
+      fee = Math.round(gatewayFee);
     }
     if (providerPaidAt) {
       paidAt = new Date(providerPaidAt);
@@ -78,4 +79,10 @@ async function fulfillOrder(reference: string, event: RwandaPayWebhookEvent) {
       status: "paid",
     })
     .where(eq(orders.id, order.id));
+
+  try {
+    await issueTicketsForOrder(order.id);
+  } catch (error) {
+    console.error("[rwandapay] ticket issuance failed:", error);
+  }
 }

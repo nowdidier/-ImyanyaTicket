@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { events, orders, ticketTiers } from "@/lib/db/schema";
 import { createCollection, isRwandaPayConfigured } from "@/lib/rwandapay";
 import { getSoldCountsByTier } from "@/lib/ticketing";
-import { tierIsOnSale } from "@/lib/ticketing-server";
+import { issueTicketsForOrder, tierIsOnSale } from "@/lib/ticketing-server";
 
 const orderSchema = z.object({
   customerEmail: z.string().email().nullish(),
@@ -111,6 +111,11 @@ export async function POST(
         .update(orders)
         .set({ paidAt: now, status: "paid" })
         .where(eq(orders.id, orderId));
+      try {
+        await issueTicketsForOrder(orderId);
+      } catch (error) {
+        console.error("[orders] ticket issuance failed:", error);
+      }
       return Response.json({ orderId, status: "paid" }, { status: 201 });
     }
 

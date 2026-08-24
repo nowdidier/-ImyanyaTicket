@@ -15,6 +15,7 @@ interface OrderStatusData {
 }
 
 interface OrderStatusProps {
+  eventId: string;
   eventSlug: string;
   eventTitle: string;
   initialOrder: OrderStatusData;
@@ -22,6 +23,7 @@ interface OrderStatusProps {
 }
 
 export function OrderStatus({
+  eventId,
   eventTitle,
   eventSlug,
   initialOrder,
@@ -66,14 +68,14 @@ export function OrderStatus({
         <div className="space-y-2">
           <h1 className="font-bold text-3xl">Payment confirmed!</h1>
           <p className="text-muted-foreground">
-            Your tickets for{" "}
+            Your ticket for{" "}
             <Link
               className="text-foreground underline"
               href={`/e/${eventSlug}`}
             >
               {eventTitle}
             </Link>{" "}
-            are ready.
+            is ready.
           </p>
         </div>
         <div className="rounded-lg border p-4 text-left text-sm">
@@ -91,6 +93,9 @@ export function OrderStatus({
           </div>
         </div>
         <Button asChild className="w-full">
+          <Link href={`/ticket/${eventId}`}>View your ticket</Link>
+        </Button>
+        <Button asChild className="w-full" variant="outline">
           <Link href={`/e/${eventSlug}`}>Back to event</Link>
         </Button>
       </div>

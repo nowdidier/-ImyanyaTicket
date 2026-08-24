@@ -34,6 +34,7 @@ export default async function OrderPage({
       <OrderStatus
         eventSlug={order.event.slug}
         eventTitle={order.event.title}
+        eventId={order.eventId}
         initialOrder={{
           id: order.id,
           paidAt: order.paidAt?.toISOString() ?? null,
