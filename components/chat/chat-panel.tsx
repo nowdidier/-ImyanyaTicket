@@ -1,7 +1,6 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { code } from "@streamdown/code";
 import {
   DefaultChatTransport,
   getToolName,
@@ -32,7 +31,6 @@ import {
 } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Streamdown } from "streamdown";
 import {
   Artifact,
   ArtifactAction,
@@ -47,6 +45,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { Markdown } from "@/components/ai-elements/markdown";
 import {
   Message,
   MessageAction,
@@ -324,13 +323,12 @@ function ChatSession({
                           <Fragment key={`${message.id}-${idx}`}>
                             <Message from="assistant">
                               <MessageContent>
-                                <Streamdown
+                                <Markdown
                                   animated={isStreaming}
                                   linkSafety={{ enabled: false }}
-                                  plugins={{ code }}
                                 >
                                   {text}
-                                </Streamdown>
+                                </Markdown>
                               </MessageContent>
                             </Message>
                             {isLastText && artifacts.length > 0 && (
