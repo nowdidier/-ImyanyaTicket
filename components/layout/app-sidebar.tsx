@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   Settings,
+  Ticket,
   User,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,6 +30,7 @@ import { NavUser } from "./nav-user";
 
 const overviewItems = [
   { icon: LayoutDashboard, title: "Dashboard", url: "/dashboard" },
+  { icon: Ticket, title: "My Tickets", url: "/dashboard/tickets" },
   { icon: Bot, title: "AI Chat", url: "/dashboard/chat" },
 ];
 
