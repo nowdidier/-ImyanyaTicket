@@ -1,13 +1,34 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
-import { ArrowLeft, Calendar, Download, MapPin, Ticket } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Download,
+  MapPin,
+  Printer,
+  Ticket,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ShareEventButton } from "@/components/events/share-event-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
+function formatRwf(amount: number): string {
+  return `RWF ${amount.toLocaleString("en-RW")}`;
+}
+
+interface TicketOrder {
+  id: string;
+  paidAt: string | null;
+  quantity: number;
+  tierName: string;
+  totalAmount: number;
+  unitPrice: number;
+}
 
 interface TicketData {
   endTime: string | null;
@@ -15,10 +36,12 @@ interface TicketData {
   eventSlug: string;
   eventTitle: string;
   location: string | null;
+  orders: TicketOrder[];
   qrCode: string;
   rsvpId: string;
   startTime: string;
   timezone: string;
+  totalTickets: number;
   userEmail: string;
   userName: string;
 }
@@ -76,7 +99,7 @@ export default function TicketPage() {
   const startTime = new Date(ticket.startTime);
   const endTime = ticket.endTime ? new Date(ticket.endTime) : null;
 
-  function handleDownload() {
+  function handleDownloadQrCode() {
     if (!ticket) {
       return;
     }
@@ -86,25 +109,23 @@ export default function TicketPage() {
     link.click();
   }
 
+  const eventUrl = ticket.eventSlug
+    ? `/e/${ticket.eventSlug}`
+    : `/events/${eventId}`;
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-4 print:bg-background">
       <div className="w-full max-w-md space-y-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 print:hidden">
           <Button asChild size="sm" variant="ghost">
-            <Link
-              href={
-                ticket?.eventSlug
-                  ? `/e/${ticket.eventSlug}`
-                  : `/events/${eventId}`
-              }
-            >
+            <Link href={eventUrl}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               Event
             </Link>
           </Button>
         </div>
 
-        <Card className="overflow-hidden shadow-xl">
+        <Card className="overflow-hidden shadow-xl print:shadow-none">
           <div className="bg-primary px-6 py-5 text-center">
             <p className="font-medium text-primary-foreground/70 text-xs uppercase tracking-wider">
               Imyanya Tickets
@@ -148,6 +169,11 @@ export default function TicketPage() {
               <p className="text-muted-foreground text-sm">
                 {ticket.userEmail}
               </p>
+              <p className="text-muted-foreground text-sm">
+                {ticket.totalTickets}{" "}
+                {ticket.totalTickets === 1 ? "ticket" : "tickets"} in this
+                account
+              </p>
             </div>
 
             <div className="flex justify-center py-4">
@@ -163,13 +189,60 @@ export default function TicketPage() {
             <p className="text-center text-muted-foreground text-xs">
               Present this QR code at the event for check-in
             </p>
+
+            {ticket.orders.length > 0 ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="font-medium text-sm">Paid ticket orders</p>
+                  {ticket.orders.map((order) => (
+                    <div
+                      className="rounded-lg border bg-muted/40 p-3 text-sm"
+                      key={order.id}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-medium">{order.tierName}</span>
+                        <span className="text-muted-foreground text-xs">
+                          x{order.quantity}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between gap-3 text-xs">
+                        <span className="font-mono text-muted-foreground">
+                          {order.id.slice(0, 8)}
+                        </span>
+                        <span>{formatRwf(order.totalAmount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </CardContent>
         </Card>
 
-        <Button className="w-full" onClick={handleDownload} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Download QR Code
-        </Button>
+        <div className="grid gap-2 print:hidden">
+          <Button
+            className="w-full"
+            onClick={handleDownloadQrCode}
+            variant="outline"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download QR Code
+          </Button>
+          <Button
+            className="w-full"
+            onClick={() => window.print()}
+            variant="outline"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print or Save PDF
+          </Button>
+          <ShareEventButton
+            className="w-full"
+            eventTitle={ticket.eventTitle}
+            url={eventUrl}
+          />
+        </div>
       </div>
     </div>
   );

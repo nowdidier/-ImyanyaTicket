@@ -27,6 +27,7 @@ import { EventTabsNav } from "@/components/events/event-tabs-nav";
 import { InviteForm } from "@/components/events/invite-form";
 import { QuestionBuilder } from "@/components/events/question-builder";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
+import { ShareEventButton } from "@/components/events/share-event-button";
 import { TicketTierManager } from "@/components/events/ticket-tier-manager";
 import {
   Avatar,
@@ -838,8 +839,13 @@ function OverviewTab({
                 Share Event
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="space-y-2 pt-0">
               <CopyLinkButton url={shareUrl} variant="pill" />
+              <ShareEventButton
+                className="w-full justify-start"
+                eventTitle={event.title}
+                url={shareUrl}
+              />
             </CardContent>
           </Card>
 

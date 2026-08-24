@@ -10,6 +10,7 @@ import { CalendarExportButton } from "@/components/events/calendar-export-button
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
+import { ShareEventButton } from "@/components/events/share-event-button";
 import { TicketPurchase } from "@/components/events/ticket-purchase";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -293,9 +294,19 @@ export default async function PublicEventBySlugPage({
         ) : null}
       </div>
 
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="font-bold text-4xl tracking-tight">{event.title}</h1>
-        <CopyLinkButton url={`${appUrl}/e/${slug}`} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="min-w-0 font-bold text-4xl tracking-tight">
+          {event.title}
+        </h1>
+        <div className="flex shrink-0 items-center gap-1">
+          <ShareEventButton
+            eventTitle={event.title}
+            label="Share"
+            size="sm"
+            url={`${appUrl}/e/${slug}`}
+          />
+          <CopyLinkButton url={`${appUrl}/e/${slug}`} />
+        </div>
       </div>
       <HoverCard>
         <HoverCardTrigger asChild>
