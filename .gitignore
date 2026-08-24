@@ -87,3 +87,6 @@ skills/
 
 # gstack local artifacts (security reports, etc.)
 .gstack/
+
+.vercel
+.env*

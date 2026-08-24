@@ -1,4 +1,5 @@
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { GeistMono } from "geist/font/mono";
 import {
   GeistPixelCircle,
   GeistPixelGrid,
@@ -6,7 +7,6 @@ import {
   GeistPixelSquare,
   GeistPixelTriangle,
 } from "geist/font/pixel";
-import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";

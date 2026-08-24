@@ -59,4 +59,5 @@ export default nextConfig;
 
 // Populates local Cloudflare bindings (ASSETS, IMAGES, etc.) during `next dev`.
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
 initOpenNextCloudflareForDev();
