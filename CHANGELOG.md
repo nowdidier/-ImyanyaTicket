@@ -6,6 +6,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.3.0](https://github.com/nowdidier/-ImyanyaTicket/compare/v0.2.0...v0.3.0) (2026-08-25)
+
+
+### Features
+
+* **dashboard:** add my tickets link to sidebar ([72722bb](https://github.com/nowdidier/-ImyanyaTicket/commit/72722bbfc4230fcf596d39b20d2b4733fe174db5))
+* **ticketing:** add waitlist promotion, coupons, and ticket transfers ([6d6e4ff](https://github.com/nowdidier/-ImyanyaTicket/commit/6d6e4ff4fddb2614cbd2f3f3b770cd01d68ea7f1))
+* **tickets:** add buyer ticket sharing ([d30194c](https://github.com/nowdidier/-ImyanyaTicket/commit/d30194cac8608fc26237493b7e00882010744fe3))
+
+
+### Bug Fixes
+
+* **chat:** load streamdown client-side to keep ssr bundle under workers limit ([5517271](https://github.com/nowdidier/-ImyanyaTicket/commit/55172711ab8f8e669d150026d181158121d17d19))
+* **payments:** issue approved RSVP and confirmation email when order is paid ([889844d](https://github.com/nowdidier/-ImyanyaTicket/commit/889844db2ef64de34ee23e2f03e017d8876b9f4f))
+
 ## [0.2.0](https://github.com/Nishitbaria/openluma/compare/openluma-v0.1.0...openluma-v0.2.0) (2026-07-19)
 
 
