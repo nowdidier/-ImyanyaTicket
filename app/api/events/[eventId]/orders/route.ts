@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
 import { getAppUrl } from "@/lib/app-url";
 import { auth } from "@/lib/auth";
+import { evaluateCoupon, recordCouponRedemption } from "@/lib/coupons";
 import { db } from "@/lib/db";
 import { events, orders, ticketTiers } from "@/lib/db/schema";
 import { createCollection, isRwandaPayConfigured } from "@/lib/rwandapay";
@@ -11,6 +12,7 @@ import { getSoldCountsByTier } from "@/lib/ticketing";
 import { issueTicketsForOrder, tierIsOnSale } from "@/lib/ticketing-server";
 
 const orderSchema = z.object({
+  couponCode: z.string().max(40).optional(),
   customerEmail: z.string().email().nullish(),
   customerName: z.string().min(1).max(120).optional(),
   customerPhone: z.string().regex(/^07\d{8}$/, "Phone must be 07XXXXXXXX"),
@@ -85,7 +87,26 @@ export async function POST(
     );
   }
 
-  const totalAmount = tier.price * input.quantity;
+  const subtotal = tier.price * input.quantity;
+  let couponId: string | null = null;
+  let discountAmount = 0;
+  if (input.couponCode) {
+    const evaluation = await evaluateCoupon(
+      eventId,
+      input.couponCode,
+      subtotal
+    );
+    if (!evaluation.coupon) {
+      return Response.json(
+        { message: evaluation.error ?? "Invalid coupon code" },
+        { status: 400 }
+      );
+    }
+    couponId = evaluation.coupon.id;
+    discountAmount = evaluation.discountAmount;
+  }
+
+  const totalAmount = Math.max(subtotal - discountAmount, 0);
   const customerName = input.customerName ?? session.user.name ?? "Customer";
 
   let orderId: string | null = null;
@@ -93,9 +114,11 @@ export async function POST(
     const [order] = await db
       .insert(orders)
       .values({
+        couponId,
         customerEmail: input.customerEmail ?? null,
         customerName,
         customerPhone: input.customerPhone,
+        discountAmount,
         eventId,
         quantity: input.quantity,
         tierId: tier.id,
@@ -111,6 +134,11 @@ export async function POST(
         .update(orders)
         .set({ paidAt: now, status: "paid" })
         .where(eq(orders.id, orderId));
+      try {
+        await recordCouponRedemption(orderId);
+      } catch (error) {
+        console.error("[orders] coupon redemption failed:", error);
+      }
       try {
         await issueTicketsForOrder(orderId);
       } catch (error) {

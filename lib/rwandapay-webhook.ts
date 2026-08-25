@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
+import { recordCouponRedemption } from "@/lib/coupons";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import {
@@ -79,6 +80,12 @@ async function fulfillOrder(reference: string, event: RwandaPayWebhookEvent) {
       status: "paid",
     })
     .where(eq(orders.id, order.id));
+
+  try {
+    await recordCouponRedemption(order.id);
+  } catch (error) {
+    console.error("[rwandapay] coupon redemption failed:", error);
+  }
 
   try {
     await issueTicketsForOrder(order.id);

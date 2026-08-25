@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import EventReminderEmail from "@/emails/event-reminder-email";
 import InvitationEmail from "@/emails/invitation-email";
 import RsvpStatusEmail from "@/emails/rsvp-status-email";
+import TicketTransferEmail from "@/emails/ticket-transfer-email";
 import { getAppUrl } from "@/lib/app-url";
 import { SITE_EMAIL_FROM } from "@/lib/site-config";
 
@@ -274,6 +275,45 @@ export async function sendRsvpConfirmationEmail(
 
   if (error) {
     console.error("Failed to send RSVP email:", error);
+  }
+  return { data, error };
+}
+
+export async function sendTicketTransferEmail(
+  to: string,
+  eventTitle: string,
+  recipientName: string,
+  event?: {
+    id: string;
+    slug?: string;
+  }
+) {
+  if (!resend) {
+    return;
+  }
+
+  const eventUrl = event ? eventLink(event) : appUrl;
+
+  const html = await render(
+    TicketTransferEmail({
+      eventTitle,
+      eventUrl,
+      recipientName,
+    })
+  );
+
+  const { data, error } = await sendWithReliability(
+    {
+      from: fromEmail,
+      html,
+      subject: `Ticket transferred — ${eventTitle}`,
+      to,
+    },
+    `transfer-${event?.id ?? "noevent"}-${to}`
+  );
+
+  if (error) {
+    console.error("Failed to send transfer email:", error);
   }
   return { data, error };
 }

@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { promoteNextFromWaitlist } from "@/lib/ticketing-server";
 
 export async function GET(
   _request: NextRequest,
@@ -298,6 +299,13 @@ export async function PATCH(
         }
       })();
     }
+
+    // Downgrading an approved guest opens a seat for the waitlist
+    if (existingRsvp?.status === "approved" && status !== "approved") {
+      await promoteNextFromWaitlist(eventId).catch((err) =>
+        console.error("[rsvp] waitlist promotion failed:", err)
+      );
+    }
   }
 
   return Response.json(updated);
@@ -333,9 +341,17 @@ export async function DELETE(
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
 
-    await db
+    const [removedRsvp] = await db
       .delete(rsvps)
-      .where(and(eq(rsvps.id, body.rsvpId), eq(rsvps.eventId, eventId)));
+      .where(and(eq(rsvps.id, body.rsvpId), eq(rsvps.eventId, eventId)))
+      .returning({ status: rsvps.status });
+
+    // Removing an approved guest opens a seat for the waitlist
+    if (removedRsvp?.status === "approved") {
+      await promoteNextFromWaitlist(eventId).catch((err) =>
+        console.error("[rsvp] waitlist promotion failed:", err)
+      );
+    }
 
     return Response.json({ message: "RSVP removed" });
   }
@@ -350,52 +366,11 @@ export async function DELETE(
     .delete(rsvps)
     .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
 
-  // Auto-promote oldest waitlisted RSVP when an approved seat opens up
+  // Auto-promote oldest waitlisted RSVPs when approved seats open up
   if (cancelledRsvp?.status === "approved") {
-    const event = await db.query.events.findFirst({
-      columns: {
-        endTime: true,
-        id: true,
-        location: true,
-        slug: true,
-        startTime: true,
-        timezone: true,
-        title: true,
-      },
-      where: eq(events.id, eventId),
-    });
-
-    const nextInLine = await db.query.rsvps.findFirst({
-      orderBy: [asc(rsvps.createdAt)],
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
-      with: { user: { columns: { email: true, id: true } } },
-    });
-
-    if (nextInLine && event) {
-      await db
-        .update(rsvps)
-        .set({ status: "approved", updatedAt: new Date() })
-        .where(eq(rsvps.id, nextInLine.id));
-
-      if (nextInLine.user.email) {
-        sendRsvpConfirmationEmail(
-          nextInLine.user.email,
-          event.title,
-          "approved",
-          {
-            endTime: event.endTime,
-            id: event.id,
-            location: event.location,
-            slug: event.slug ?? undefined,
-            startTime: event.startTime,
-            timezone: event.timezone,
-            title: event.title,
-          }
-        ).catch((err) =>
-          console.error("Failed to send waitlist promotion email:", err)
-        );
-      }
-    }
+    await promoteNextFromWaitlist(eventId).catch((err) =>
+      console.error("[rsvp] waitlist promotion failed:", err)
+    );
   }
 
   return Response.json({ message: "RSVP cancelled" });

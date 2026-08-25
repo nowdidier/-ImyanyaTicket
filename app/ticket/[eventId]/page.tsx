@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ShareEventButton } from "@/components/events/share-event-button";
+import { TransferTicketDialog } from "@/components/events/transfer-ticket-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -237,6 +238,7 @@ export default function TicketPage() {
             <Printer className="mr-2 h-4 w-4" />
             Print or Save PDF
           </Button>
+          <TransferTicketDialog eventId={eventId} />
           <ShareEventButton
             className="w-full"
             eventTitle={ticket.eventTitle}

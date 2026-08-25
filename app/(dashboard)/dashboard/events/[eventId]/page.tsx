@@ -20,6 +20,7 @@ import { AttendeeList } from "@/components/events/attendee-list";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
 import { CloneEventButton } from "@/components/events/clone-event-button";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
+import { CouponManager } from "@/components/events/coupon-manager";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { EventAnalytics } from "@/components/events/event-analytics";
 import { EventEditDrawer } from "@/components/events/event-edit-drawer";
@@ -401,7 +402,10 @@ export default async function EventDetailPage({
       )}
 
       {tab === "tickets" && canManage && (
-        <TicketTierManager eventId={eventId} />
+        <div className="space-y-10">
+          <TicketTierManager eventId={eventId} />
+          <CouponManager eventId={eventId} />
+        </div>
       )}
 
       {tab === "insights" && canManage && analyticsData && (

@@ -108,6 +108,8 @@ export const questionTypeEnum = pgEnum("question_type", [
   "terms",
 ]);
 
+export const couponTypeEnum = pgEnum("coupon_type", ["percent", "fixed"]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
   "paid",
@@ -338,13 +340,42 @@ export const ticketTiers = pgTable(
   (table) => [index("ticket_tiers_event_id_idx").on(table.eventId)]
 );
 
+export const coupons = pgTable(
+  "coupons",
+  {
+    active: boolean("active").notNull().default(true),
+    code: text("code").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at"),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    maxRedemptions: integer("max_redemptions"),
+    timesRedeemed: integer("times_redeemed").notNull().default(0),
+    type: couponTypeEnum("type").notNull().default("percent"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    value: integer("value").notNull(),
+  },
+  (table) => [
+    uniqueIndex("coupons_event_code_unique").on(table.eventId, table.code),
+    index("coupons_event_id_idx").on(table.eventId),
+  ]
+);
+
 export const orders = pgTable(
   "orders",
   {
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    couponId: text("coupon_id").references(() => coupons.id, {
+      onDelete: "set null",
+    }),
     customerEmail: text("customer_email"),
     customerName: text("customer_name").notNull(),
     customerPhone: text("customer_phone").notNull(),
+    discountAmount: integer("discount_amount").notNull().default(0),
     eventId: text("event_id")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
@@ -372,6 +403,31 @@ export const orders = pgTable(
     index("orders_event_id_idx").on(table.eventId),
     index("orders_user_id_idx").on(table.userId),
     uniqueIndex("orders_payment_reference_unique").on(table.paymentReference),
+  ]
+);
+
+export const ticketTransfers = pgTable(
+  "ticket_transfers",
+  {
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    fromUserId: text("from_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    orderIds: json("order_ids").$type<string[]>().notNull().default([]),
+    toUserId: text("to_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("ticket_transfers_event_id_idx").on(table.eventId),
+    index("ticket_transfers_from_user_idx").on(table.fromUserId),
+    index("ticket_transfers_to_user_idx").on(table.toUserId),
   ]
 );
 
@@ -433,6 +489,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   }),
   checkins: many(attendeeCheckins),
   cohosts: many(eventCohosts),
+  coupons: many(coupons),
   host: one(user, { fields: [events.hostId], references: [user.id] }),
   invitations: many(invitations),
   orders: many(orders),
@@ -441,6 +498,15 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   rsvps: many(rsvps),
   tags: many(eventTags),
   ticketTiers: many(ticketTiers),
+  transfers: many(ticketTransfers),
+}));
+
+export const couponsRelations = relations(coupons, ({ one, many }) => ({
+  event: one(events, {
+    fields: [coupons.eventId],
+    references: [events.id],
+  }),
+  orders: many(orders),
 }));
 
 export const ticketTiersRelations = relations(ticketTiers, ({ one, many }) => ({
@@ -452,6 +518,10 @@ export const ticketTiersRelations = relations(ticketTiers, ({ one, many }) => ({
 }));
 
 export const ordersRelations = relations(orders, ({ one }) => ({
+  coupon: one(coupons, {
+    fields: [orders.couponId],
+    references: [coupons.id],
+  }),
   event: one(events, { fields: [orders.eventId], references: [events.id] }),
   tier: one(ticketTiers, {
     fields: [orders.tierId],
@@ -459,6 +529,26 @@ export const ordersRelations = relations(orders, ({ one }) => ({
   }),
   user: one(user, { fields: [orders.userId], references: [user.id] }),
 }));
+
+export const ticketTransfersRelations = relations(
+  ticketTransfers,
+  ({ one }) => ({
+    event: one(events, {
+      fields: [ticketTransfers.eventId],
+      references: [events.id],
+    }),
+    fromUser: one(user, {
+      fields: [ticketTransfers.fromUserId],
+      references: [user.id],
+      relationName: "transferFrom",
+    }),
+    toUser: one(user, {
+      fields: [ticketTransfers.toUserId],
+      references: [user.id],
+      relationName: "transferTo",
+    }),
+  })
+);
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
   events: many(events),

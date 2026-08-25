@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
+import { recordCouponRedemption } from "@/lib/coupons";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import {
@@ -55,6 +56,11 @@ export async function GET(
           .where(eq(orders.id, orderId))
           .returning();
         order = updated ?? order;
+        try {
+          await recordCouponRedemption(orderId);
+        } catch (error) {
+          console.error("[orders] coupon redemption failed:", error);
+        }
         try {
           await issueTicketsForOrder(orderId);
         } catch (error) {

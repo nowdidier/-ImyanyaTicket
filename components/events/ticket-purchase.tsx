@@ -1,5 +1,6 @@
 "use client";
 
+import { Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -19,6 +20,11 @@ const MOMO_PHONE_RE = /^07\d{8}$/;
 
 function formatRwf(amount: number): string {
   return `RWF ${amount.toLocaleString("en-RW")}`;
+}
+
+interface AppliedCoupon {
+  code: string;
+  discountAmount: number;
 }
 
 export function TicketPurchase({
@@ -48,11 +54,56 @@ export function TicketPurchase({
   const [quantity, setQuantity] = useState(1);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null
+  );
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   const tier = available.find((t) => t.id === tierId);
   const maxQty = tier
     ? Math.min(tier.maxPerOrder, tier.remaining ?? tier.maxPerOrder)
     : 1;
+  const subtotal = (tier?.price ?? 0) * quantity;
+
+  function clearCouponIfApplied() {
+    if (appliedCoupon) {
+      setAppliedCoupon(null);
+    }
+  }
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim();
+    if (!code) {
+      return;
+    }
+    if (!tier) {
+      toast.error("Select a ticket first");
+      return;
+    }
+    setCheckingCoupon(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/coupons/validate`, {
+        body: JSON.stringify({ code, quantity, tierId: tier.id }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        toast.error(data.message ?? "Invalid coupon code");
+        return;
+      }
+      setAppliedCoupon({
+        code: code.toUpperCase(),
+        discountAmount: data.discountAmount,
+      });
+      toast.success(`Coupon ${code.toUpperCase()} applied`);
+    } catch {
+      toast.error("Something went wrong");
+    } finally {
+      setCheckingCoupon(false);
+    }
+  }
 
   async function handleBuy() {
     if (!isAuthenticated) {
@@ -71,6 +122,7 @@ export function TicketPurchase({
     try {
       const res = await fetch(`/api/events/${eventId}/orders`, {
         body: JSON.stringify({
+          ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
           customerPhone: phone,
           quantity,
           tierId: tier.id,
@@ -84,6 +136,13 @@ export function TicketPurchase({
         return;
       }
       if (!res.ok) {
+        // A coupon rejected server-side at checkout shouldn't stick around
+        if (
+          typeof data.message === "string" &&
+          data.message.toLowerCase().includes("coupon")
+        ) {
+          setAppliedCoupon(null);
+        }
         toast.error(data.message ?? "Could not start checkout");
         return;
       }
@@ -123,7 +182,10 @@ export function TicketPurchase({
                 : "hover:border-primary/50"
             }`}
             key={t.id}
-            onClick={() => setTierId(t.id)}
+            onClick={() => {
+              setTierId(t.id);
+              clearCouponIfApplied();
+            }}
             type="button"
           >
             <div className="flex items-center justify-between">
@@ -158,6 +220,7 @@ export function TicketPurchase({
               setQuantity(
                 Number.isNaN(v) ? 1 : Math.min(Math.max(v, 1), maxQty)
               );
+              clearCouponIfApplied();
             }}
             type="number"
             value={quantity}
@@ -175,11 +238,70 @@ export function TicketPurchase({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t pt-3">
-        <span className="text-muted-foreground text-sm">Total</span>
-        <span className="font-bold">
-          {formatRwf((tier?.price ?? 0) * quantity)}
-        </span>
+      <div className="space-y-1.5">
+        <Label htmlFor="ticket-coupon">Coupon code</Label>
+        {appliedCoupon ? (
+          <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+            <span className="flex items-center gap-1.5 font-medium text-sm">
+              <Tag className="h-3.5 w-3.5" />
+              {appliedCoupon.code}
+            </span>
+            <button
+              aria-label="Remove coupon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setAppliedCoupon(null)}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              className="uppercase"
+              id="ticket-coupon"
+              onChange={(e) => setCouponInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleApplyCoupon();
+                }
+              }}
+              placeholder="EARLYBIRD"
+              value={couponInput}
+            />
+            <Button
+              disabled={checkingCoupon || !couponInput.trim()}
+              onClick={handleApplyCoupon}
+              type="button"
+              variant="outline"
+            >
+              {checkingCoupon ? "…" : "Apply"}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1 border-t pt-3">
+        {appliedCoupon ? (
+          <>
+            <div className="flex items-center justify-between text-muted-foreground text-sm">
+              <span>Subtotal</span>
+              <span>{formatRwf(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-primary text-sm">
+              <span>Discount ({appliedCoupon.code})</span>
+              <span>-{formatRwf(appliedCoupon.discountAmount)}</span>
+            </div>
+          </>
+        ) : null}
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground text-sm">Total</span>
+          <span className="font-bold">
+            {formatRwf(
+              Math.max(subtotal - (appliedCoupon?.discountAmount ?? 0), 0)
+            )}
+          </span>
+        </div>
       </div>
 
       <Button
@@ -188,7 +310,13 @@ export function TicketPurchase({
         onClick={handleBuy}
         size="lg"
       >
-        {loading ? "Starting…" : "Buy tickets"}
+        {subtotal > 0 && subtotal - (appliedCoupon?.discountAmount ?? 0) <= 0
+          ? loading
+            ? "Claiming…"
+            : "Claim free tickets"
+          : loading
+            ? "Starting…"
+            : "Buy tickets"}
       </Button>
       <p className="text-center text-muted-foreground text-xs">
         Pay with MTN MoMo or Airtel Money via RwandaPay
